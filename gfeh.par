@@ -1,0 +1,159 @@
+# comment lines start with `#`
+#
+# PARAMETER FILE FOR THE METALLICITY PREDICTION MODEL FOR THE Gaia G WAVEBAND
+#
+# simply comment/uncomment the relevant lines for retraining / deployment
+
+--seed    42
+
+# EXECUTION MODE:
+# ---------------
+
+#--train
+--predict
+#--refit        # leave it commented if training a k-fold ensemble
+--cross_validate
+--nn_type    rnn
+#-cpu           # uncomment it if you do not have GPU
+
+# ----------------------------------------------------------------------------------------------------------------------
+# I/O PARAMETERS:
+# ---------------
+
+--verbose
+
+# Full path of the root directory (all other directory and file names will be relative to this).
+--rootdir    .
+
+--outdir     results_g
+
+--input_model_dir     results_g/best_model_g
+
+########## Relative path of the directory containing the input light curves.
+############################################################################
+##########    TRAIN (G):
+#--lcdir    lc_dev_g
+##########    DEPLOY on full Gaia DR2 sample:
+--lcdir    lc_target_g
+
+########## The file containing the metadata of the stars.
+#########################################################
+##########    TRAIN:
+#--input_file  o4rrab_gaiaDR2_bp_rp_i_g_param.dat
+##########    DEPLOY on full Gaia DR2 sample:
+--input_file  gaiaDR2_rrab_g__all_gpr_param.dat
+
+# Output file with the predictions:
+--target_output_file    target_g.out
+
+########## Input Gaia wavebands.
+################################
+--wavebands    g
+#--wavebands    g bp rp
+
+########## Suffices of the light-curve files (must match the --wavebands arguments)
+###################################################################################
+--lcfile_suffices    _bin.dat
+# --lcfile_suffices    _bin.dat _bin.dat _bin.dat
+
+# Filename suffices for the predictions on the training / validation / test data:
+--predict_train_output    predict_train_gfeh
+--predict_val_output      predict_val_gfeh
+--predict_test_output     predict_test_gfeh
+
+--plot_input_data
+
+--save_model
+#--save_checkpoints         # useful if you expect the training to be interrupted, and want to resume it later
+
+# File for saving/loading the model architecture and weights:
+--model_file_prefix    model
+--weights_file_prefix    weights
+
+# File for saving/loading the standard scaling coefficients of the metadata:
+--metascaler_file    gfeh_scaler
+
+--log_training
+
+--plot_prediction
+
+# ----------------------------------------------------------------------------------------------------------------------
+# DATA PARAMETERS:      [don't change these if you deploy the trained model]
+# ----------------
+
+--max_phase    1.0
+
+##########    TRAIN (G):
+#--columns   id period snr_g totamp_g phcov_g Nep_g Nep_i totamp_i costN_i phcov_i snr_i meanmag_g FeH FeH_e
+##########    DEPLOY on full Gaia DR2 sample:
+--columns    id period snr totamp phcov Nep meanmag
+
+##########    TRAIN (G):
+#--features    id period totamp_g FeH FeH_e
+##########    DEPLOY on full Gaia DR2 sample:
+--features    id period totamp
+
+##########    TRAIN (G):
+#--subset    period>0.28 and period<0.98 and totamp_i<1.1 and totamp_g<1.4 and phcov_g>0.85 and
+#            Nep_g>20 and snr_g>30 and FeH>-2.7 and FeH<0.0 and FeH_e<0.3
+
+##########    DEPLOY on full Gaia DR2 sample:
+--subset    period>0.28 and period<0.98 and totamp<1.4 and phcov>0.85 and Nep>20 and snr>30
+
+# uncomment this only if using a model with second input layer for metadata:
+#--meta_input period
+#--meta_input period totamp_g totamp_bp totamp_rp
+
+#--explicit_test_frac    0.2
+--weighing_by_density    0.5
+
+# TRAINING PARAMETERS
+# -------------------
+--eval_metric    r2
+--k_fold    10
+--ensemble
+--split_frac 0.1
+#--n_repeats 1
+#--pick_fold    2
+--n_epochs    50000  # 100000
+--auto_stop    early
+--min_delta    1e-5    # 1e-6
+--patience    1000
+--batch_size_per_replica    256
+-lr    0.01
+--n_zoom    200
+--n_update    100
+#--optimize_lr
+#--decay    0.00005
+
+# MODEL PARAMETERS:
+# -----------------
+
+--model    bilstm2p
+
+--hpars 16 16 l1 5e-6 5e-6 0 0 0.1 0.1           # best model settings
+
+#--hpars    16  16  l1  5e-6  5e-6  5e-6  5e-6   0   0
+#--hpars    16  16  l1  3e-6  3e-6  5e-6  5e-6   0   0
+#--hpars    16  16  l1  1e-6  1e-6  5e-6  5e-6   0   0
+
+#--hpars    16  16  l1  5e-6  5e-6  3e-6  3e-6   0   0
+#--hpars    16  16  l1  3e-6  3e-6  3e-6  3e-6   0   0
+#--hpars    16  16  l1  1e-6  1e-6  3e-6  3e-6   0   0
+
+#--hpars    16  16  l1  5e-6  5e-6  1e-6  1e-6   0   0
+#--hpars    16  16  l1  3e-6  3e-6  1e-6  1e-6   0   0
+#--hpars    16  16  l1  1e-6  1e-6  1e-6  1e-6   0   0
+
+# 32 units:
+#--hpars    32  32  l1  5e-6  5e-6  0  0  0.5  0.5
+#--hpars    32  32  l1  3e-6  3e-6  0  0  0.5  0.5
+#--hpars    32  32  l1  1e-6  1e-6  0  0  0.5  0.5
+
+#--hpars    32  32  l1  5e-6  5e-6  0  0  0.3  0.3
+#--hpars    32  32  l1  3e-6  3e-6  0  0  0.3  0.3
+#--hpars    32  32  l1  1e-6  1e-6  0  0  0.3  0.3
+
+#--hpars    32  32  l1  5e-6  5e-6  0  0  0.1  0.1
+#--hpars    32  32  l1  3e-6  3e-6  0  0  0.1  0.1
+#--hpars    32  32  l1  1e-6  1e-6  0  0  0.1  0.1

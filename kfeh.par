@@ -1,0 +1,160 @@
+# comment lines start with `#`
+#
+# PARAMETER FILE FOR THE METALLICITY PREDICTION MODEL FOR THE VISTA Ks WAVEBAND
+#
+# simply comment/uncomment the relevant lines for retraining / deployment
+
+--seed    42
+
+# EXECUTION MODE:
+# ---------------
+
+#--train
+--predict
+#--refit        # leave it commented if training a k-fold ensemble
+--cross_validate
+--nn_type    rnn
+#-cpu           # uncomment it if you do not have GPU
+
+# ----------------------------------------------------------------------------------------------------------------------
+# I/O PARAMETERS:
+# ---------------
+
+--verbose
+
+# Full path of the root directory (all other directory and file names will be relative to this).
+--rootdir    .
+
+########## RESULTS OF THE TRAINING WILL BE WRITTEN TO THIS DIRECTORY:
+--outdir     results_k
+
+########## MODEL WEIGHTS FOR DEPLOYMENT WILL BE READ FROM THIS DIRECTORY:
+--input_model_dir     results_k/best_model_k
+
+########## Relative path of the directory containing the input light curves.
+############################################################################
+##########    TRAIN:
+#--lcdir      lc_dev_k
+##########    DEPLOY on central bulge RRab:
+--lcdir     lc_target_k
+
+########## The file containing the metadata of the stars.
+#########################################################
+##########    TRAIN:
+#--input_file  o4rrl_bulge_ik_gpr_param.dat
+##########    DEPLOY on central bulge RRab:
+--input_file  inner_bulge_new_rrab.dat
+
+# Output file with the predictions:
+##########    TRAIN:
+#--target_output_file    kfeh_dev.out
+##########    DEPLOY on central bulge RRab:
+--target_output_file    kfeh_target.out
+
+########## Input wavebands:
+--wavebands    k
+
+########## Suffices of the light-curve files (must match the --wavebands arguments)
+###################################################################################
+--lcfile_suffices    _bin.dat
+
+# Filename suffices for the predictions on the training / validation / test data:
+--predict_train_output    predict_train_kfeh
+--predict_val_output      predict_val_kfeh
+--predict_test_output     predict_test_kfeh
+
+--plot_input_data
+
+--save_model
+#--save_checkpoints         # useful if you expect the training to be interrupted, and want to resume it later
+
+# File for saving/loading the model architecture and weights:
+--model_file_prefix    model
+--weights_file_prefix    weights
+
+# File for saving/loading the standard scaling coefficients of the metadata:
+--metascaler_file    kfeh_scaler
+
+--log_training
+
+--plot_prediction
+
+# ----------------------------------------------------------------------------------------------------------------------
+# DATA PARAMETERS:      [don't change these if you deploy the trained model]
+# ----------------
+
+--max_phase    1.2
+
+--nbins   60
+
+##########    TRAIN:
+# --columns    id period snr_k totamp_k phcov_k Nep_k meanmag_k costN_k Nep_i totamp_i costN_i phcov_i snr_i FeH FeH_e blazhko_prob
+##########    DEPLOY on central bulge RRab:
+--columns    id period totamp_k
+
+
+##########    TRAIN:
+#--features    id period totamp_k FeH FeH_e
+##########    DEPLOY on central bulge RRab:
+--features     id period totamp_k
+
+##########    TRAIN:
+#--subset    period>0.28 and period<0.98 and totamp_i<1.1 and totamp_i>0.1 and costN_i<0.003 and phcov_i>0.9 and
+#            totamp_k<0.45 and totamp_k>0.05 and phcov_k>0.9 and costN_k<0.005 and snr_k>100 and
+#            FeH>-2.5 and FeH<0.0 and FeH_e<0.15 and blazhko_prob<0.7
+
+##########    DEPLOY on central bulge RRab::
+--subset    period>0.28 and period<0.98
+
+# uncomment this only if using a model with second input layer for metadata:
+#--meta_input period
+#--meta_input period totamp_g
+
+#--explicit_test_frac    0.2
+--weighing_by_density    0.9
+
+# TRAINING PARAMETERS:
+# --------------------
+
+--eval_metric    r2
+--k_fold    10
+--ensemble
+--split_frac 0.1
+#--n_repeats 1
+#--pick_fold    2
+--n_epochs    50000
+--auto_stop    early
+--min_delta    1e-5    # 1e-6
+--patience    1000
+--batch_size_per_replica    256
+-lr    0.005
+--n_zoom    200
+--n_update    100
+#--optimize_lr
+#--decay    0.00005
+
+# MODEL PARAMETERS:
+# -----------------
+
+--model    bilstm2p
+
+# Hyper-parameters for bilstm2p model:
+
+--hpars     32  32  l1  3e-6  3e-6   0   0  0.1  0.1     # best model settings
+
+#--hpars    32  32  l1  5e-6  5e-6   0   0  0.1  0.1
+#--hpars    32  32  l1  3e-6  3e-6   0   0  0.1  0.1
+#--hpars    32  32  l1  1e-6  1e-6   0   0  0.1  0.1
+
+#--hpars    32  32  l1  5e-6  5e-6   0   0  0.3  0.3
+#--hpars    32  32  l1  3e-6  3e-6   0   0  0.3  0.3
+#--hpars    32  32  l1  1e-6  1e-6   0   0  0.3  0.3
+
+#--hpars    32  32  l1  5e-6  5e-6   0   0  0.5  0.5
+#--hpars    32  32  l1  3e-6  3e-6   0   0  0.5  0.5
+#--hpars    32  32  l1  1e-6  1e-6   0   0  0.5  0.5
+
+
+# cnn:
+#--hpars    0.1 0.2 0.3 0.5
+
