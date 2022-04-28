@@ -5,7 +5,7 @@ import tensorflow as tf
 import sys
 import functools
 import os
-import keras.backend as K
+import tensorflow.keras.backend as K
 from matplotlib import pyplot as plt
 # from IPython.display import clear_output
 from scipy.stats import gaussian_kde, binned_statistic as binstat
@@ -411,7 +411,7 @@ def cross_validate(model, folds: list, x_list: list or tuple, y,
         # Create and compile the model:
         tf.keras.backend.clear_session()
         tf.random.set_seed(seed)
-        if strategy is not None and n_devices > 1:
+        if strategy is not None:
             # Apply distributed strategy on model if multiple devices are present:
             with strategy.scope():
                 model_ = model(**model_kwargs)
@@ -428,7 +428,11 @@ def cross_validate(model, folds: list, x_list: list or tuple, y,
             # Initialize model weights:
             model_.set_weights(initial_weights)
 
-        model_.compile(**compile_kwargs)
+        if strategy is not None:
+            with strategy.scope():
+                model_.compile(**compile_kwargs)
+        else:
+            model_.compile(**compile_kwargs)
 
         print("fold " + str(i_cv + 1) + "/" + str(len(folds)))
         print("n_train = {}  ;  n_val = {}".format(train_index.shape[0], val_index.shape[0]))

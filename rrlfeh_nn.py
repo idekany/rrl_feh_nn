@@ -58,40 +58,10 @@ else:
     pars = parser.parse_args()
 
 pars = ut.process_input_parameters(pars, min_folds_cv=min_folds_cv)
-np.random.seed(seed=pars.seed)  # random seed for data shuffling
-
-# ------------------------------------------
-# LOSS, METRICS, OPTIMIZATION, MODEL:
-
-# Set the loss, val. metrics, and the optmization algorithm:
-loss = tf.keras.losses.MeanSquaredError()
-# loss = ut.HuberLoss(threshold=0.2)
-
-# performance evaluation metric to report during training:
-optimizer = tf.keras.optimizers.Adam(learning_rate=pars.learning_rate, beta_1=0.9, beta_2=0.999,
-                                     epsilon=1e-07, amsgrad=False)
-# metrics = [tf.keras.metrics.RootMeanSquaredError(), ut.get_lr_metric(optimizer)]
-metrics = [tf.keras.metrics.RootMeanSquaredError()]
-
-model = mm.available_models[pars.model]
-
-# model = mm.conv3_2c_f233s1p3s2_gmp_fc64
-# model = mm.cnn3_fc_model
-# model = mm.lstm2_fc1_model
-# model = mm.lstm2_model
-# model = mm.bilstm2rd_fc1_model
-# model = mm.bilstm2p_model
+np.random.seed(seed=pars.seed)      # random seed for data shuffling
 
 # ------------------------------------------
 # SET UP DEVICE(S):
-
-# Calculate batch size in case of multi-device parallel training using mirrored strategy:
-strategy = tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
-n_devices = strategy.num_replicas_in_sync
-print('Number of devices: {}'.format(n_devices))
-batch_size = pars.batch_size_per_replica * n_devices
-print("Global batch size = {}".format(batch_size))
-print("Batch size per replica = {}".format(pars.batch_size_per_replica))
 
 # Check the number of GPUs and set identical memory growth:
 gpus = tf.config.list_physical_devices('GPU')
@@ -110,6 +80,57 @@ if gpus:
     n_gpus = len(gpus)
 else:
     n_gpus = 0
+
+# Set up strategy for multi / single GPU or CPU:
+
+if n_gpus > 1:
+    # Calculate batch size in case of multi-device parallel training using mirrored strategy:
+    strategy = tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
+    n_devices = strategy.num_replicas_in_sync
+    print("Number of devices: ", n_devices)
+    print('Mirrored strategy set for GPUs: ')
+    for gpu in gpus:
+        print(gpu.name)
+    batch_size = pars.batch_size_per_replica * strategy.num_replicas_in_sync
+
+elif n_gpus == 1:
+    strategy = tf.distribute.get_strategy()     # default strategy that works on CPU and single GPU
+    n_devices = strategy.num_replicas_in_sync
+    print("Number of devices: ", n_devices)
+    print('Default strategy set for GPU: ', gpus[0].name)
+    batch_size = pars.batch_size_per_replica
+
+else:
+    strategy = tf.distribute.get_strategy()     # default strategy that works on CPU and single GPU
+    n_devices = strategy.num_replicas_in_sync
+    print("Number of devices: ", n_devices)
+    print('Default strategy set for CPU')
+    batch_size = pars.batch_size_per_replica
+
+print("Global batch size = {}".format(batch_size))
+print("Batch size per replica = {}".format(pars.batch_size_per_replica))
+
+# ------------------------------------------
+# LOSS, METRICS, OPTIMIZATION, MODEL:
+
+# Set the loss, val. metrics, and the optmization algorithm:
+with strategy.scope():
+    loss = tf.keras.losses.MeanSquaredError()
+    # loss = ut.HuberLoss(threshold=0.2)
+    # performance evaluation metric to report during training:
+    optimizer = tf.keras.optimizers.Adam(learning_rate=pars.learning_rate, beta_1=0.9, beta_2=0.999,
+                                         epsilon=1e-07, amsgrad=False)
+    # metrics = [tf.keras.metrics.RootMeanSquaredError(), ut.get_lr_metric(optimizer)]
+    metrics = [tf.keras.metrics.RootMeanSquaredError()]
+
+model = mm.available_models[pars.model]
+
+# model = mm.conv3_2c_f233s1p3s2_gmp_fc64
+# model = mm.cnn3_fc_model
+# model = mm.lstm2_fc1_model
+# model = mm.lstm2_model
+# model = mm.bilstm2rd_fc1_model
+# model = mm.bilstm2p_model
 
 # ======================================================================================================================
 #                                         D A T A    I N P U T
@@ -460,13 +481,10 @@ if pars.train:
         tf.keras.backend.clear_session()
         tf.random.set_seed(pars.seed)
         # Define and compile model:
-        if n_devices > 1:
-            # Apply mirrored strategy on model_ if multiple devices are present:
-            with strategy.scope():
-                model_ = model(n_timesteps=nmags, n_channels=pars.n_channels, n_meta=pars.n_meta, hparams=hparams_best)
-        else:
+
+        with strategy.scope():
             model_ = model(n_timesteps=nmags, n_channels=pars.n_channels, n_meta=pars.n_meta, hparams=hparams_best)
-        model_.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+            model_.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
         if pars.meta_input:
             # Standard-scale data:
