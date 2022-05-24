@@ -1,7 +1,7 @@
 # Estimation of the heavy-element content (metallicity) of fundamental-mode RR Lyrae stars from their  light curves in the Gaia _G_ and VISTA _Ks_ wavebands
 
 This is a Python3 library for the metallicity estimation of RR Lyrae stars 
-by deep learning, using the method published by [Dekany & Grebel (2022)](https://github.com/idekany/rrl_feh_nn/blob/master/paper_v1.pdf).
+by deep learning, using the method published by Dekany & Grebel (2022).
 
 ## Installation
 
